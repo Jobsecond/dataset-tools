@@ -51,7 +51,7 @@ jobs:
       shell: bash
       working-directory: ${{github.workspace}}/vcpkg
       run: |
-        vcpkg.exe install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --binarysource="clear;x-gha,readwrite" --triplet=x64-osx
+        vcpkg install --x-manifest-root=../scripts/vcpkg-manifest --x-install-root=./installed --binarysource="clear;x-gha,readwrite" --triplet=x64-osx
       env:
           QT_DIR: ${{env.QT_DIR}}
           Qt5_DIR: ${{env.QT_DIR}}
