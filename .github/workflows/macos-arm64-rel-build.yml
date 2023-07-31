@@ -1,9 +1,10 @@
 name: CMake
 
-on:
-  push:
-    tags:
-      - "*"
+on: [push]
+  # Only run when there's a tag
+  #push:
+  #  tags: 
+  #    - '*'
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
