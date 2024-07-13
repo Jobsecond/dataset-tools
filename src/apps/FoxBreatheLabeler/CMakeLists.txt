@@ -26,12 +26,28 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 file(GLOB_RECURSE onnx_files ../../libs/onnxruntime/lib/*.*)
 foreach (onnx_file ${onnx_files})
+    get_filename_component(file_ext ${onnx_file} EXT)
+    string(TOLOWER ${file_ext} file_ext)
+    if (file_ext STREQUAL ".pdb" OR file_ext STREQUAL ".lib")
+        continue()
+    endif ()
+
     file(COPY ${onnx_file} DESTINATION ${CMAKE_BINARY_DIR}/bin)
 endforeach ()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         APP_VERSION="${PROJECT_VERSION}"
 )
+
+if (WIN32)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        ONNXRUNTIME_ENABLE_DML
+    )
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        dxgi
+    )
+endif()
+
 
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 

@@ -13,7 +13,7 @@ namespace FBL {
 
     class FBL {
     public:
-        explicit FBL(const QString &modelDir);
+        explicit FBL(const QString &modelDir, bool useGpu = false, int deviceIndex = 0, bool *isOk = nullptr, QString *errorMessage = nullptr);
         ~FBL();
 
         [[nodiscard]] bool recognize(const QString &filename, std::vector<std::pair<float, float>> &res, QString &msg,

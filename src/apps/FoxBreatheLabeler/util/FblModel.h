@@ -6,17 +6,25 @@
 #include <vector>
 namespace FBL {
 
+    enum ExecutionProvider {
+        EP_CPU = 1,
+        EP_DirectML = 2,
+        EP_CUDA = 3,
+    };
+
     class FblModel {
     public:
-        explicit FblModel(const std::string &model_path);
+        FblModel();
         ~FblModel();
+        bool load(const std::string &model_path, ExecutionProvider ep, int deviceIndex, std::string &msg);
+        void free();
         bool forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
-                     std::string &msg) const;
+                     std::string &msg);
+        bool isLoaded() const;
 
     private:
         Ort::Env m_env;
-        Ort::SessionOptions m_session_options;
-        Ort::Session *m_session;
+        Ort::Session m_session;
         Ort::AllocatorWithDefaultOptions m_allocator;
         const char *m_input_name;
         const char *m_output_name;
@@ -26,6 +34,7 @@ namespace FBL {
 #else
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 #endif
+        bool m_isLoaded;
     };
 
 } // FBL

@@ -1,34 +1,64 @@
 #include "FblModel.h"
+#include "ExecutionProvider.h"
 
 #include <syscmdline/system.h>
 
 namespace FBL {
-    FblModel::FblModel(const std::string &model_path)
-        : m_env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "FblModel")), m_session_options(Ort::SessionOptions()),
-          m_session(nullptr) {
+    FblModel::FblModel()
+        : m_env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "FblModel")),
+          m_session(nullptr), m_isLoaded(false) {
 
         m_input_name = "waveform";
         m_output_name = "ap_probability";
-
-#ifdef _WIN32
-        const std::wstring wstrPath = SysCmdLine::utf8ToWide(model_path);
-        m_session = new Ort::Session(m_env, wstrPath.c_str(), m_session_options);
-#else
-        m_session = new Ort::Session(m_env, model_path.c_str(), m_session_options);
-#endif
     }
 
-    FblModel::~FblModel() {
-        delete m_session;
-        m_input_name = {};
-        m_output_name = {};
+    FblModel::~FblModel() = default;
+
+    bool FblModel::load(const std::string &model_path, ExecutionProvider ep, int deviceIndex, std::string &msg) {
+        try {
+            Ort::SessionOptions sessionOptions;
+            std::string errorMessage;
+            switch (ep) {
+                case EP_CUDA:
+                    if (!initCUDA(sessionOptions, deviceIndex, &errorMessage)) {
+                        msg = "Could not load model using CUDA execution provider: " + errorMessage;
+                        return false;
+                    }
+                    break;
+                case EP_DirectML:
+                    if (!initDirectML(sessionOptions, deviceIndex, &errorMessage)) {
+                        msg = "Could not load model using DirectML execution provider: " + errorMessage;
+                        return false;
+                    }
+                    break;
+                default:
+                    break;
+            }
+#ifdef _WIN32
+            const std::wstring wstrPath = SysCmdLine::utf8ToWide(model_path);
+            m_session = Ort::Session(m_env, wstrPath.c_str(), sessionOptions);
+#else
+            m_session = Ort::Session(m_env, model_path.c_str(), m_session_options);
+#endif
+            m_isLoaded = true;
+            return true;
+        } catch (const Ort::Exception &e) {
+            msg = std::string("Could not load model: ") + e.what();
+        }
+        return false;
+    }
+
+    void FblModel::free() {
+        m_session = Ort::Session(nullptr);
+        m_isLoaded = false;
     }
 
     bool FblModel::forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
-                           std::string &msg) const {
+                           std::string &msg) {
         const size_t batch_size = input_data.size();
         if (batch_size == 0) {
-            throw std::invalid_argument("输入数据不能为空。");
+            msg = "输入数据不能为空。";
+            return false;
         }
 
         // 确定输入数据中最大的长度
@@ -54,7 +84,7 @@ namespace FBL {
 
         try {
             auto output_tensors =
-                m_session->Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1, &m_output_name, 1);
+                m_session.Run(Ort::RunOptions{nullptr}, &m_input_name, &input_tensor, 1, &m_output_name, 1);
 
             const float *float_array = output_tensors.front().GetTensorMutableData<float>();
             result = std::vector<float>(
@@ -64,5 +94,9 @@ namespace FBL {
             msg = "Error during model inference: " + std::string(e.what());
             return false;
         }
+    }
+
+    bool FblModel::isLoaded() const {
+        return m_isLoaded;
     }
 } // FBL

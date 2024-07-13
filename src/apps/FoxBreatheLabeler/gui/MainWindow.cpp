@@ -12,7 +12,9 @@
 #include "QMSystem.h"
 #include <QStandardPaths>
 
+#include "DeviceDialog.h"
 #include "../util/FblThread.h"
+#include "../util/DmlUtil.h"
 
 namespace FBL {
     MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
@@ -23,15 +25,40 @@ namespace FBL {
             QApplication::applicationDirPath() + QDir::separator() + "fbl_model"
 #endif
         );
+        bool isFblLoaded = false;
+        bool useGpu = false;
         if (QDir(modelFolder).exists()) {
             const auto modelPath = modelFolder + QDir::separator() + "model.onnx";
             const auto configPath = modelFolder + QDir::separator() + "config.yaml";
-            if (!QFile(modelPath).exists() || !QFile(configPath).exists())
+            if (!QFile(modelPath).exists() || !QFile(configPath).exists()) {
                 QMessageBox::information(
                     this, "Warning",
                     "Missing model.onnx or config.yaml, please read ReadMe.md and download the model again.");
-            else
-                m_fbl = new FBL(modelFolder);
+            }
+            else {
+                QString fblErrorMessage;
+#ifdef ONNXRUNTIME_ENABLE_DML
+                auto gpuList = getDirectXGPUs();
+                DeviceDialog deviceDialog(gpuList);
+                if (deviceDialog.exec() == QDialog::Accepted) {
+                    if (deviceDialog.useGpu()) {
+                        useGpu = true;
+                    }
+                    int deviceIndex = deviceDialog.deviceIndex();
+                    m_fbl = new FBL(modelFolder, useGpu, deviceIndex, &isFblLoaded, &fblErrorMessage);
+                } else {
+                    m_fbl = new FBL(modelFolder, false, 0, &isFblLoaded, &fblErrorMessage);
+                }
+#else
+                m_fbl = new FBL(modelFolder, false, 0, &isFblLoaded, &fblErrorMessage);
+#endif
+                if (!isFblLoaded) {
+                    QMessageBox::warning(this, "Could not load model",
+                                         fblErrorMessage);
+                    delete m_fbl;
+                    m_fbl = nullptr;
+                }
+            }
         } else {
 #ifdef Q_OS_MAC
             QMessageBox::information(
@@ -133,7 +160,7 @@ namespace FBL {
         remove = new QPushButton("remove");
         clear = new QPushButton("clear");
         runFbl = new QPushButton("runFbl");
-        if (!m_fbl)
+        if (!isFblLoaded)
             runFbl->setDisabled(true);
         btnLayout->addWidget(remove);
         btnLayout->addWidget(clear);

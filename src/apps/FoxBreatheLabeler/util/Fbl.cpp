@@ -16,10 +16,13 @@
 
 namespace FBL {
 
-    FBL::FBL(const QString &modelDir) {
+    FBL::FBL(const QString &modelDir, bool useGpu, int deviceIndex, bool *isOk, QString *errorMessage) {
         const auto modelPath = modelDir + QDir::separator() + "model.onnx";
         const auto configPath = modelDir + QDir::separator() + "config.yaml";
-        m_fblModel = std::make_unique<FblModel>(modelPath.toUtf8().toStdString());
+        m_fblModel = std::make_unique<FblModel>();
+        std::string modelLoadErrMsg;
+        bool isModelLoaded = m_fblModel->load(modelPath.toUtf8().toStdString(), useGpu ? EP_DirectML : EP_CPU,
+                                              deviceIndex, modelLoadErrMsg);
 
         YAML::Node config = YAML::LoadFile(configPath.toUtf8().toStdString());
 
@@ -29,8 +32,19 @@ namespace FBL {
 
         m_time_scale = 1 / (static_cast<float>(m_audio_sample_rate) / static_cast<float>(m_hop_size));
 
-        if (!m_fblModel) {
-            qDebug() << "Cannot load ASR Model, there must be files model.onnx and vocab.txt";
+        if (!isModelLoaded) {
+            if (isOk) {
+                *isOk = false;
+            }
+            if (errorMessage) {
+                *errorMessage = QString("Cannot load ASR Model, reason:\n")
+                        + QString::fromStdString(modelLoadErrMsg)
+                        + "\n\nMake sure \"model.onnx\" and \"vocab.txt\" exist and are valid.";
+            }
+        } else {
+            if (isOk) {
+                *isOk = true;
+            }
         }
     }
 
@@ -75,7 +89,7 @@ namespace FBL {
 
     bool FBL::recognize(SF_VIO sf_vio, std::vector<std::pair<float, float>> &res, QString &msg, float ap_threshold,
                         float ap_dur) const {
-        if (!m_fblModel) {
+        if (!m_fblModel || !m_fblModel->isLoaded()) {
             return false;
         }
         SndfileHandle sf(sf_vio.vio, &sf_vio.data, SFM_READ, SF_FORMAT_WAV | SF_FORMAT_PCM_16, 1, m_audio_sample_rate);
