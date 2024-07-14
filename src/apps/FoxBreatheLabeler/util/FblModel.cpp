@@ -6,7 +6,7 @@
 namespace FBL {
     FblModel::FblModel()
         : m_env(Ort::Env(ORT_LOGGING_LEVEL_WARNING, "FblModel")),
-          m_session(nullptr), m_isLoaded(false) {
+          m_session(nullptr) {
 
         m_input_name = "waveform";
         m_output_name = "ap_probability";
@@ -40,7 +40,26 @@ namespace FBL {
 #else
             m_session = Ort::Session(m_env, model_path.c_str(), m_session_options);
 #endif
-            m_isLoaded = true;
+            // Check if input/output names match
+            bool isModelValid = true;
+            Ort::AllocatorWithDefaultOptions allocator;
+            auto inputCount = m_session.GetInputCount();
+            auto outputCount = m_session.GetOutputCount();
+            if (inputCount != 1 || outputCount != 1) {
+                isModelValid = false;
+            } else {
+                auto inputName = m_session.GetInputNameAllocated(0, allocator);
+                auto outputName = m_session.GetOutputNameAllocated(0, allocator);
+                if ((strncmp(m_input_name, inputName.get(), strlen(m_input_name)) != 0) ||
+                        (strncmp(m_output_name, outputName.get(), strlen(m_output_name)) != 0)) {
+                    isModelValid = false;
+                }
+            }
+            if (!isModelValid) {
+                unload();
+                msg = "The model is not a valid FBL model. Make sure the model matches current version of FBL.";
+                return false;
+            }
             return true;
         } catch (const Ort::Exception &e) {
             msg = std::string("Could not load model: ") + e.what();
@@ -48,9 +67,8 @@ namespace FBL {
         return false;
     }
 
-    void FblModel::free() {
+    void FblModel::unload() {
         m_session = Ort::Session(nullptr);
-        m_isLoaded = false;
     }
 
     bool FblModel::forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
@@ -97,6 +115,6 @@ namespace FBL {
     }
 
     bool FblModel::isLoaded() const {
-        return m_isLoaded;
+        return m_session;
     }
 } // FBL

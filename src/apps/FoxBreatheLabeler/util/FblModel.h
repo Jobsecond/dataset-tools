@@ -17,7 +17,7 @@ namespace FBL {
         FblModel();
         ~FblModel();
         bool load(const std::string &model_path, ExecutionProvider ep, int deviceIndex, std::string &msg);
-        void free();
+        void unload();
         bool forward(const std::vector<std::vector<float>> &input_data, std::vector<float> &result,
                      std::string &msg);
         bool isLoaded() const;
@@ -34,7 +34,6 @@ namespace FBL {
 #else
         Ort::MemoryInfo m_memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 #endif
-        bool m_isLoaded;
     };
 
 } // FBL

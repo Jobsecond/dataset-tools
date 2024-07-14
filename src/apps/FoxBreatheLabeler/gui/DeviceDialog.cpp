@@ -47,7 +47,7 @@ namespace FBL {
     }
 
     void DeviceDialog::onItemSelected(int index) {
-        m_deviceIndex = index;
+        m_deviceIndex = comboBox->itemData(index).toInt();
     }
 
     void DeviceDialog::onRadioButtonToggled(bool checked) {
