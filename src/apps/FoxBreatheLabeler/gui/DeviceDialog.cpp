@@ -1,8 +1,9 @@
 #include <QLabel>
+#include <QLocale>
 #include "DeviceDialog.h"
 
 namespace FBL {
-    DeviceDialog::DeviceDialog(const QStringList &gpuList, QWidget *parent)
+    DeviceDialog::DeviceDialog(const QList<GPUInfo> &gpuList, QWidget *parent)
             : QDialog(parent), m_deviceIndex(0), m_useGpu(false) {
 
         radioButtonCpu = new QRadioButton("CPU", this);
@@ -10,15 +11,32 @@ namespace FBL {
         radioGroup = new QButtonGroup(this);
         radioGroup->addButton(radioButtonCpu);
         radioGroup->addButton(radioButtonGpu);
-        radioButtonCpu->setChecked(true);
 
         comboBox = new QComboBox(this);
-        int currentGpuIndex = 0;
-        for (const auto &gpu: std::as_const(gpuList)) {
-            comboBox->addItem(QString("[%1] %2").arg(currentGpuIndex).arg(gpu), currentGpuIndex);
-            ++currentGpuIndex;
+
+        if (!gpuList.isEmpty()) {
+            int defaultComboBoxIndex = 0, currentComboBoxIndex = 0;
+            size_t maxMemory = 0;
+            auto locale = QLocale::system();
+            for (const auto &gpu: std::as_const(gpuList)) {
+                auto gpuMemoryInMiB = locale.toString(static_cast<double>(gpu.memory) / (1024.0 * 1024.0), 'f', 0);
+                comboBox->addItem(QString("[%1] %2 (%3 MiB)").arg(gpu.index).arg(gpu.name).
+                        arg(gpuMemoryInMiB), gpu.index);
+                if (gpu.memory > maxMemory) {
+                    defaultComboBoxIndex = currentComboBoxIndex;
+                    maxMemory = gpu.memory;
+                }
+                ++currentComboBoxIndex;
+            }
+            radioButtonGpu->setChecked(true);
+            comboBox->setCurrentIndex(defaultComboBoxIndex);
+            onItemSelected(defaultComboBoxIndex);
+            onRadioButtonToggled(true);
+        } else {
+            radioButtonGpu->setEnabled(false);
+            radioButtonCpu->setChecked(true);
+            onRadioButtonToggled(false);
         }
-        comboBox->setEnabled(radioButtonGpu->isChecked());
         buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok, this);
 
         connect(buttonBox, &QDialogButtonBox::accepted, this, &DeviceDialog::accept);

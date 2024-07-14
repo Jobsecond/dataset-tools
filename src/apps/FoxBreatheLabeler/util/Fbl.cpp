@@ -37,9 +37,9 @@ namespace FBL {
                 *isOk = false;
             }
             if (errorMessage) {
-                *errorMessage = QString("Cannot load ASR Model, reason:\n")
+                *errorMessage = QString("Cannot load FBL Model, reason:\n")
                         + QString::fromStdString(modelLoadErrMsg)
-                        + "\n\nMake sure \"model.onnx\" and \"vocab.txt\" exist and are valid.";
+                        + "\n\nMake sure \"model.onnx\" and \"config.yaml\" exist and are valid.";
             }
         } else {
             if (isOk) {

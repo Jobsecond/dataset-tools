@@ -4,6 +4,12 @@
 #include <QStringList>
 
 namespace FBL {
-    QStringList getDirectXGPUs();
+    struct GPUInfo {
+        int index;
+        QString name;
+        size_t memory;
+    };
+
+    QList<GPUInfo> getDirectXGPUs();
 }
 #endif

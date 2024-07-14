@@ -10,15 +10,15 @@ using Microsoft::WRL::ComPtr;
 #endif
 
 namespace FBL {
-    QStringList getDirectXGPUs() {
+    QList<GPUInfo> getDirectXGPUs() {
 #ifdef _WIN32
-        QStringList gpuList;
+        QList<GPUInfo> gpuList;
 
         // Create DXGI factory
         ComPtr<IDXGIFactory6> dxgiFactory;
         if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)))) {
             // "Failed to create DXGI factory."
-            return gpuList;
+            return {};
         }
 
         // Enumerate adapters
@@ -34,7 +34,11 @@ namespace FBL {
                 continue;
             }
 
-            gpuList.push_back(QString::fromWCharArray(desc.Description));
+            gpuList.push_back({
+                static_cast<int>(adapterIndex),
+                QString::fromWCharArray(desc.Description),
+                desc.DedicatedVideoMemory
+            });
         }
         return gpuList;
 #else

@@ -8,11 +8,13 @@
 #include <QRadioButton>
 #include <QVBoxLayout>
 
+#include "util/DmlUtil.h"
+
 namespace FBL {
     class DeviceDialog : public QDialog {
     Q_OBJECT
     public:
-        explicit DeviceDialog(const QStringList &items, QWidget *parent = nullptr);
+        explicit DeviceDialog(const QList<GPUInfo> &items, QWidget *parent = nullptr);
 
         ~DeviceDialog() = default;
 

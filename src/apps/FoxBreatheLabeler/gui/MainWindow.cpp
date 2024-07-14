@@ -159,7 +159,7 @@ namespace FBL {
         btnLayout = new QHBoxLayout();
         remove = new QPushButton("remove");
         clear = new QPushButton("clear");
-        runFbl = new QPushButton("runFbl");
+        runFbl = new QPushButton(useGpu ? "runFbl (GPU)" : "runFbl");
         if (!isFblLoaded)
             runFbl->setDisabled(true);
         btnLayout->addWidget(remove);
